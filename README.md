@@ -69,18 +69,19 @@ Home Assistant                                          │
 ---
 
 ## 📁 File Structure
+```
 ├── README.md
 ├── .gitignore
 ├── secrets.yaml.example
 ├── esphome/
 │   └── sensecap-indicator.yaml      # SenseCAP ESPHome configuration
 └── homeassistant/
-├── configuration.yaml.example   # configuration.yaml additions
-├── templates.yaml               # Custom sensor templates
-├── utility_meter.yaml           # Rain accumulation meters
-├── logbook_exclude.yaml         # Logbook exclude list
-└── dashboard_meteo.yaml         # Lovelace dashboard
-
+    ├── configuration.yaml.example   # configuration.yaml additions
+    ├── templates.yaml               # Custom sensor templates
+    ├── utility_meter.yaml           # Rain accumulation meters
+    ├── logbook_exclude.yaml         # Logbook exclude list
+    └── dashboard_meteo.yaml         # Lovelace dashboard
+```
 
 ---
 
