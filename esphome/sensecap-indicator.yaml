@@ -1,0 +1,494 @@
+esphome:
+  name: sensecap-indicator
+  friendly_name: SenseCAP Indicator
+
+esp32:
+  board: esp32-s3-devkitc-1
+  variant: esp32s3
+  flash_size: 8MB
+  framework:
+    type: esp-idf
+    version: recommended
+    sdkconfig_options:
+      CONFIG_ESPTOOLPY_FLASHSIZE_8MB: "y"
+      CONFIG_ESP32S3_DEFAULT_CPU_FREQ_240: "y"
+      CONFIG_ESP32S3_DATA_CACHE_64KB: "y"
+      CONFIG_SPIRAM_FETCH_INSTRUCTIONS: "y"
+      CONFIG_SPIRAM_RODATA: "y"
+
+psram:
+  mode: octal
+  speed: 80MHz
+
+# Minimal logging to reduce CPU load
+logger:
+  hardware_uart: UART0
+  level: WARN
+
+# Home Assistant API
+api:
+  encryption:
+    key: !secret api_key
+  reboot_timeout: 15min
+
+# Over-the-air updates
+ota:
+  - platform: esphome
+    password: !secret ota_password
+
+# Safe mode — rolls back firmware after 15 failed boots
+safe_mode:
+  num_attempts: 15
+  reboot_timeout: 3min
+
+# WiFi with fallback AP
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  power_save_mode: none
+  fast_connect: true
+  reboot_timeout: 15min
+  ap:
+    ssid: "Sensecap-Indicator"
+    password: !secret ap_password
+
+captive_portal:
+
+# Web server for OTA updates and monitoring via browser
+web_server:
+  port: 80
+  auth:
+    username: !secret web_username
+    password: !secret web_password
+
+# ── BLUETOOTH PROXY ──────────────────────────────────────────
+# Active BLE proxy — extends WS90 Bluetooth range
+# Window/interval tuned to reduce competition with display rendering
+esp32_ble_tracker:
+  scan_parameters:
+    interval: 1200ms
+    window: 400ms
+    active: true
+
+bluetooth_proxy:
+  active: true
+
+# ── I2C ──────────────────────────────────────────────────────
+i2c:
+  - id: bus_a
+    sda: GPIO39
+    scl: GPIO40
+    scan: false
+
+# ── SPI ──────────────────────────────────────────────────────
+spi:
+  - id: lcd_spi
+    clk_pin: GPIO41
+    mosi_pin: GPIO48
+
+# ── GPIO EXPANDER ─────────────────────────────────────────────
+pca9554:
+  - id: pca9554a_device
+    address: 0x20
+    pin_count: 16
+
+# ── BACKLIGHT ────────────────────────────────────────────────
+output:
+  - platform: ledc
+    pin:
+      number: GPIO45
+      ignore_strapping_warning: true
+    id: ledc_gpio45
+    frequency: 100Hz
+
+light:
+  - platform: monochromatic
+    name: "Backlight"
+    id: backlight
+    output: ledc_gpio45
+    restore_mode: ALWAYS_ON
+
+# ── USER BUTTON ──────────────────────────────────────────────
+# Toggles display backlight on press
+binary_sensor:
+  - platform: gpio
+    pin:
+      number: GPIO38
+      inverted: true
+    name: "User Button"
+    on_press:
+      then:
+        - light.toggle: backlight
+
+# ── DISPLAY ST7701S ──────────────────────────────────────────
+# 4-inch 480x480 RGB display
+display:
+  - platform: st7701s
+    id: my_display
+    auto_clear_enabled: false
+    data_rate: 4MHz
+    update_interval: never
+    spi_mode: MODE3
+    color_order: RGB
+    dimensions:
+      width: 480
+      height: 480
+    invert_colors: true
+    transform:
+      mirror_x: true
+      mirror_y: true
+    cs_pin:
+      pca9554: pca9554a_device
+      number: 4
+    reset_pin:
+      pca9554: pca9554a_device
+      number: 5
+    de_pin: GPIO18
+    hsync_pin: GPIO16
+    vsync_pin: GPIO17
+    pclk_pin: GPIO21
+    init_sequence:
+      - 1
+      - delay 5ms
+      - [ 0xE0, 0x1F ]
+    data_pins:
+      red:
+        - GPIO4
+        - GPIO3
+        - GPIO2
+        - GPIO1
+        - GPIO0
+      green:
+        - GPIO10
+        - GPIO9
+        - GPIO8
+        - GPIO7
+        - GPIO6
+        - GPIO5
+      blue:
+        - GPIO15
+        - GPIO14
+        - GPIO13
+        - GPIO12
+        - GPIO11
+
+# ── TOUCH FT5X06 ─────────────────────────────────────────────
+touchscreen:
+  platform: ft5x06
+  id: my_touch
+  on_release:
+    - lvgl.widget.redraw:
+
+# ── CUSTOM FONT ──────────────────────────────────────────────
+# Large 72pt font for temperature display
+# Only includes necessary glyphs to minimize flash usage
+font:
+  - file: "gfonts://Montserrat@700"
+    id: montserrat_72
+    size: 72
+    glyphs: "0123456789.,°-"
+
+# ── SWITCH ───────────────────────────────────────────────────
+switch:
+  - platform: restart
+    name: "Restart SenseCAP"
+
+# ── TIME ─────────────────────────────────────────────────────
+time:
+  - platform: homeassistant
+    id: ha_time
+    timezone: Europe/Rome
+
+# ── SENSORS FROM HOME ASSISTANT ──────────────────────────────
+sensor:
+  - platform: homeassistant
+    id: temperatura
+    entity_id: sensor.temperatura_esterna
+  - platform: homeassistant
+    id: umidita
+    entity_id: sensor.umidita_esterna
+  - platform: homeassistant
+    id: pressione
+    entity_id: sensor.pressione_atmosferica
+  - platform: homeassistant
+    id: pioggia_oggi
+    entity_id: sensor.pioggia_giornaliera
+  - platform: homeassistant
+    id: indice_uv
+    entity_id: sensor.indice_uv
+  - platform: wifi_signal
+    name: "SenseCAP Wi-Fi Signal"
+    update_interval: 30s
+  - platform: uptime
+    name: "SenseCAP Uptime Raw"
+    id: uptime_raw
+    internal: true
+    update_interval: 60s
+
+# ── TEXT SENSORS FROM HOME ASSISTANT ─────────────────────────
+text_sensor:
+  - platform: homeassistant
+    id: condizione
+    entity_id: sensor.condizione_meteo
+  - platform: homeassistant
+    id: comfort
+    entity_id: sensor.comfort_termico
+  - platform: version
+    name: "SenseCAP ESPHome Version"
+    hide_timestamp: true
+  - platform: wifi_info
+    ip_address:
+      name: "SenseCAP IP Address"
+  - platform: template
+    name: "SenseCAP Uptime"
+    update_interval: 60s
+    lambda: |-
+      int seconds = (int)(id(uptime_raw).state);
+      int days    = seconds / 86400;
+      int hours   = (seconds % 86400) / 3600;
+      int minutes = (seconds % 3600) / 60;
+      return { str_sprintf("%dd %02dh %02dm", days, hours, minutes) };
+
+# ── LVGL ─────────────────────────────────────────────────────
+lvgl:
+  displays:
+    - my_display
+  touchscreens:
+    - my_touch
+  bg_color: 0x0a0a1a
+
+  # Boot screen with spinner — hidden when HA data is ready
+  top_layer:
+    widgets:
+      - obj:
+          id: boot_screen
+          x: 0
+          y: 0
+          width: 100%
+          height: 100%
+          bg_color: 0x000000
+          bg_opa: COVER
+          radius: 0
+          pad_all: 0
+          border_width: 0
+          widgets:
+            - label:
+                align: CENTER
+                y: -60
+                text: "Weather Station"
+                text_font: MONTSERRAT_24
+                text_color: 0xFFFFFF
+            - label:
+                align: CENTER
+                y: -20
+                text: "Connecting to Home Assistant..."
+                text_font: MONTSERRAT_18
+                text_color: 0x666688
+            - spinner:
+                align: CENTER
+                y: 60
+                height: 60
+                width: 60
+                spin_time: 1s
+                arc_length: 60deg
+                arc_width: 8
+                indicator:
+                  arc_color: 0x00CFFF
+                  arc_width: 8
+
+  pages:
+    - id: main_page
+      widgets:
+
+        # ── TIME & DATE ──────────────────────────────────────
+        - label:
+            id: lbl_ora
+            x: 10
+            y: 10
+            width: 220
+            text_align: LEFT
+            text_font: MONTSERRAT_18
+            text_color: 0x666688
+            text: "--:--"
+
+        - label:
+            id: lbl_data
+            x: 250
+            y: 10
+            width: 220
+            text_align: RIGHT
+            text_font: MONTSERRAT_18
+            text_color: 0x666688
+            text: "---"
+
+        - line:
+            points:
+              - 20,38
+              - 460,38
+            line_color: 0x222244
+            line_width: 1
+
+        # ── TEMPERATURE — dominant, large font ───────────────
+        - label:
+            x: 0
+            y: 48
+            width: 480
+            text_align: CENTER
+            text_font: MONTSERRAT_14
+            text_color: 0x555566
+            text: "OUTDOOR TEMPERATURE"
+
+        - label:
+            id: lbl_temp
+            x: 0
+            y: 65
+            width: 480
+            text_align: CENTER
+            text_font: montserrat_72
+            text_color: 0xFF4500
+            text: "--°"
+
+        # ── COMFORT ─────────────────────────────────────────
+        - label:
+            id: lbl_comfort
+            x: 0
+            y: 195
+            width: 480
+            text_align: CENTER
+            text_font: MONTSERRAT_32
+            text_color: 0x00FF99
+            text: "---"
+
+        # ── WEATHER CONDITION ────────────────────────────────
+        - label:
+            id: lbl_condizione
+            x: 0
+            y: 242
+            width: 480
+            text_align: CENTER
+            text_font: MONTSERRAT_18
+            text_color: 0x00CFFF
+            text: "---"
+
+        - line:
+            points:
+              - 20,280
+              - 460,280
+            line_color: 0x222244
+            line_width: 1
+
+        # ── SECONDARY DATA ───────────────────────────────────
+        - label:
+            x: 10
+            y: 290
+            text_font: MONTSERRAT_12
+            text_color: 0x555566
+            text: "HUMIDITY"
+
+        - label:
+            id: lbl_umidita
+            x: 10
+            y: 305
+            text_font: MONTSERRAT_24
+            text_color: 0x00BFFF
+            text: "--%"
+
+        - label:
+            x: 130
+            y: 290
+            text_font: MONTSERRAT_12
+            text_color: 0x555566
+            text: "PRESSURE"
+
+        - label:
+            id: lbl_pressione
+            x: 130
+            y: 305
+            text_font: MONTSERRAT_24
+            text_color: 0xAA88FF
+            text: "--- hPa"
+
+        - label:
+            x: 300
+            y: 290
+            text_font: MONTSERRAT_12
+            text_color: 0x555566
+            text: "RAIN TODAY"
+
+        - label:
+            id: lbl_pioggia
+            x: 300
+            y: 305
+            text_font: MONTSERRAT_24
+            text_color: 0x00CFFF
+            text: "-- mm"
+
+        - label:
+            x: 420
+            y: 290
+            text_font: MONTSERRAT_12
+            text_color: 0x555566
+            text: "UV"
+
+        - label:
+            id: lbl_uv
+            x: 420
+            y: 305
+            text_font: MONTSERRAT_24
+            text_color: 0xFFCC00
+            text: "--"
+
+        - line:
+            points:
+              - 20,350
+              - 460,350
+            line_color: 0x222244
+            line_width: 1
+
+        # ── FOOTER ──────────────────────────────────────────
+        - label:
+            x: 0
+            y: 358
+            width: 480
+            text_align: CENTER
+            text_font: MONTSERRAT_14
+            text_color: 0x444466
+            text: "Weather Station — Milan, Italy"
+
+# ── DATA UPDATE EVERY 5 SECONDS ──────────────────────────────
+interval:
+  - interval: 5s
+    then:
+      - if:
+          condition:
+            lambda: 'return id(ha_time).now().is_valid();'
+          then:
+            - lvgl.widget.hide:
+                id: boot_screen
+            - lvgl.label.update:
+                id: lbl_ora
+                text: !lambda return id(ha_time).now().strftime("%H:%M");
+            - lvgl.label.update:
+                id: lbl_data
+                text: !lambda return id(ha_time).now().strftime("%d/%m/%Y");
+            - lvgl.label.update:
+                id: lbl_condizione
+                text: !lambda return id(condizione).state;
+            - lvgl.label.update:
+                id: lbl_temp
+                text: !lambda return str_sprintf("%.1f°", id(temperatura).state);
+            - lvgl.label.update:
+                id: lbl_comfort
+                text: !lambda return id(comfort).state;
+            - lvgl.label.update:
+                id: lbl_umidita
+                text: !lambda return str_sprintf("%.0f%%", id(umidita).state);
+            - lvgl.label.update:
+                id: lbl_pressione
+                text: !lambda return str_sprintf("%.0f hPa", id(pressione).state);
+            - lvgl.label.update:
+                id: lbl_pioggia
+                text: !lambda return str_sprintf("%.1f mm", id(pioggia_oggi).state);
+            - lvgl.label.update:
+                id: lbl_uv
+                text: !lambda return str_sprintf("%.1f", id(indice_uv).state);
