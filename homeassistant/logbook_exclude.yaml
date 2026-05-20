@@ -1,0 +1,18 @@
+# ============================================================
+# Logbook Exclude - Entities excluded from activity log
+# Include in configuration.yaml with:
+#   logbook:
+#     exclude:
+#       entities: !include logbook_exclude.yaml
+#
+# These sensors change frequently and would flood the logbook
+# ============================================================
+
+- sensor.direzione_vento_testo
+- sensor.velocita_vento_km_h
+- sensor.raffica_vento_km_h
+- sensor.vento_beaufort
+- sensor.condizione_meteo
+- sensor.comfort_termico
+- sensor.categoria_uv
+- sensor.irraggiamento_solare
