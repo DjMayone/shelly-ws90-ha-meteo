@@ -1,0 +1,369 @@
+# ============================================================
+# Lovelace Dashboard - Shelly WS90 Weather Station
+# Add this as a new view in your existing dashboard
+# or create a new dashboard and paste the full content.
+#
+# Required HACS cards:
+#   - mushroom (v5.1.1+)
+#   - mini-graph-card
+# ============================================================
+
+title: Meteo
+path: meteo
+icon: mdi:weather-partly-cloudy
+cards:
+
+  # ── HEADER ──────────────────────────────────────────────
+  - type: custom:mushroom-title-card
+    title: Stazione Meteo — Terrazzo
+    subtitle: "{{ states('sensor.condizione_meteo') }}"
+
+  - type: custom:mushroom-entity-card
+    entity: sensor.condizione_meteo
+    name: Condizione Meteo
+    layout: vertical
+    primary_info: state
+    secondary_info: none
+
+  # ── TEMPERATURE ─────────────────────────────────────────
+  - type: horizontal-stack
+    cards:
+      - type: custom:mushroom-entity-card
+        entity: sensor.temperatura_esterna
+        name: Temperatura
+        icon: mdi:thermometer
+        icon_color: orange
+        fill_container: true
+        layout: vertical
+        primary_info: state
+        secondary_info: name
+      - type: custom:mushroom-entity-card
+        entity: sensor.temperatura_percepita
+        name: Percepita
+        icon: mdi:thermometer-lines
+        icon_color: deep-orange
+        fill_container: true
+        layout: vertical
+        primary_info: state
+        secondary_info: name
+      - type: custom:mushroom-entity-card
+        entity: sensor.temperatura_wind_chill
+        name: Wind Chill
+        icon: mdi:thermometer-chevron-down
+        icon_color: blue
+        fill_container: true
+        layout: vertical
+        primary_info: state
+        secondary_info: name
+
+  - type: custom:mini-graph-card
+    name: Temperatura ultimi 2 giorni
+    icon: mdi:thermometer
+    entities:
+      - entity: sensor.temperatura_esterna
+        name: Temperatura
+        color: "#f97316"
+      - entity: sensor.temperatura_percepita
+        name: Percepita
+        color: "#ef4444"
+        show_state: false
+    hours_to_show: 48
+    points_per_hour: 2
+    line_width: 2
+    smoothing: true
+    show:
+      labels: true
+      points: false
+      legend: true
+      fill: fade
+
+  # ── HUMIDITY & PRESSURE ──────────────────────────────────
+  - type: horizontal-stack
+    cards:
+      - type: custom:mushroom-entity-card
+        entity: sensor.umidita_esterna
+        name: Umidità
+        icon: mdi:water-percent
+        icon_color: cyan
+        fill_container: true
+        layout: vertical
+        primary_info: state
+        secondary_info: name
+      - type: custom:mushroom-entity-card
+        entity: sensor.punto_rugiada
+        name: Rugiada
+        icon: mdi:water
+        icon_color: teal
+        fill_container: true
+        layout: vertical
+        primary_info: state
+        secondary_info: name
+      - type: custom:mushroom-entity-card
+        entity: sensor.comfort_termico
+        name: Comfort
+        icon: mdi:home-thermometer
+        icon_color: green
+        fill_container: true
+        layout: vertical
+        primary_info: state
+        secondary_info: name
+
+  - type: custom:mini-graph-card
+    name: Umidità + Punto di rugiada
+    icon: mdi:water-percent
+    entities:
+      - entity: sensor.umidita_esterna
+        name: Umidità
+        color: "#06b6d4"
+      - entity: sensor.punto_rugiada
+        name: Rugiada
+        color: "#0d9488"
+        show_state: false
+    hours_to_show: 48
+    points_per_hour: 2
+    line_width: 2
+    smoothing: true
+    show:
+      labels: true
+      points: false
+      legend: true
+      fill: fade
+
+  - type: custom:mini-graph-card
+    name: Pressione atmosferica
+    icon: mdi:gauge
+    entities:
+      - entity: sensor.pressione_atmosferica
+        name: Pressione
+        color: "#8b5cf6"
+    hours_to_show: 48
+    points_per_hour: 2
+    line_width: 2
+    smoothing: true
+    show:
+      labels: true
+      points: false
+      legend: false
+      fill: fade
+
+  # ── WIND ────────────────────────────────────────────────
+  - type: horizontal-stack
+    cards:
+      - type: custom:mushroom-entity-card
+        entity: sensor.velocita_vento_km_h
+        name: Velocità
+        icon: mdi:weather-windy
+        icon_color: blue
+        fill_container: true
+        layout: vertical
+        primary_info: state
+        secondary_info: name
+      - type: custom:mushroom-entity-card
+        entity: sensor.raffica_vento_km_h
+        name: Raffica
+        icon: mdi:weather-windy-variant
+        icon_color: indigo
+        fill_container: true
+        layout: vertical
+        primary_info: state
+        secondary_info: name
+      - type: custom:mushroom-entity-card
+        entity: sensor.vento_beaufort
+        name: Beaufort
+        icon: mdi:speedometer
+        icon_color: purple
+        fill_container: true
+        layout: vertical
+        primary_info: state
+        secondary_info: name
+      - type: custom:mushroom-entity-card
+        entity: sensor.direzione_vento_testo
+        name: Direzione
+        icon: mdi:compass-rose
+        icon_color: blue
+        fill_container: true
+        layout: vertical
+        primary_info: state
+        secondary_info: name
+
+  - type: custom:mini-graph-card
+    name: Vento ultimi 2 giorni
+    icon: mdi:weather-windy
+    entities:
+      - entity: sensor.velocita_vento_km_h
+        name: Velocità
+        color: "#3b82f6"
+      - entity: sensor.raffica_vento_km_h
+        name: Raffica
+        color: "#6366f1"
+        show_state: false
+    hours_to_show: 48
+    points_per_hour: 2
+    line_width: 2
+    smoothing: true
+    show:
+      labels: true
+      points: false
+      legend: true
+      fill: fade
+
+  # ── RAIN ────────────────────────────────────────────────
+  - type: horizontal-stack
+    cards:
+      - type: custom:mushroom-entity-card
+        entity: binary_sensor.pioggia_in_corso
+        name: Pioggia
+        icon: mdi:weather-rainy
+        fill_container: true
+        layout: vertical
+        primary_info: state
+        secondary_info: name
+      - type: custom:mushroom-entity-card
+        entity: sensor.pioggia_giornaliera
+        name: Oggi
+        icon: mdi:weather-pouring
+        icon_color: blue
+        fill_container: true
+        layout: vertical
+        primary_info: state
+        secondary_info: name
+      - type: custom:mushroom-entity-card
+        entity: sensor.pioggia_mensile
+        name: Questo mese
+        icon: mdi:calendar-month
+        icon_color: cyan
+        fill_container: true
+        layout: vertical
+        primary_info: state
+        secondary_info: name
+      - type: custom:mushroom-entity-card
+        entity: sensor.pioggia_annuale
+        name: Quest'anno
+        icon: mdi:calendar
+        icon_color: teal
+        fill_container: true
+        layout: vertical
+        primary_info: state
+        secondary_info: name
+
+  - type: custom:mini-graph-card
+    name: Precipitazioni ultimi 2 giorni
+    icon: mdi:weather-rainy
+    entities:
+      - entity: sensor.precipitazioni
+        name: Pioggia
+        color: "#0ea5e9"
+    hours_to_show: 48
+    points_per_hour: 2
+    line_width: 2
+    smoothing: false
+    show:
+      labels: true
+      points: true
+      legend: false
+      fill: true
+
+  # ── SUN & UV ────────────────────────────────────────────
+  - type: horizontal-stack
+    cards:
+      - type: custom:mushroom-entity-card
+        entity: sensor.illuminamento
+        name: Lux
+        icon: mdi:brightness-5
+        icon_color: yellow
+        fill_container: true
+        layout: vertical
+        primary_info: state
+        secondary_info: name
+      - type: custom:mushroom-entity-card
+        entity: sensor.irraggiamento_solare
+        name: W/m²
+        icon: mdi:solar-power
+        icon_color: orange
+        fill_container: true
+        layout: vertical
+        primary_info: state
+        secondary_info: name
+      - type: custom:mushroom-entity-card
+        entity: sensor.indice_uv
+        name: Indice UV
+        icon: mdi:sun-wireless
+        icon_color: amber
+        fill_container: true
+        layout: vertical
+        primary_info: state
+        secondary_info: name
+      - type: custom:mushroom-entity-card
+        entity: sensor.categoria_uv
+        name: Categoria UV
+        icon: mdi:shield-sun
+        icon_color: red
+        fill_container: true
+        layout: vertical
+        primary_info: state
+        secondary_info: name
+
+  - type: custom:mini-graph-card
+    name: Irraggiamento solare oggi
+    icon: mdi:solar-power
+    entities:
+      - entity: sensor.irraggiamento_solare
+        name: W/m²
+        color: "#eab308"
+    hours_to_show: 24
+    points_per_hour: 4
+    line_width: 2
+    smoothing: true
+    show:
+      labels: true
+      points: false
+      legend: false
+      fill: fade
+
+  - type: custom:mini-graph-card
+    name: Indice UV oggi
+    icon: mdi:sun-wireless
+    entities:
+      - entity: sensor.indice_uv
+        name: UV
+        color: "#f97316"
+    hours_to_show: 24
+    points_per_hour: 4
+    line_width: 2
+    smoothing: true
+    show:
+      labels: true
+      points: false
+      legend: false
+      fill: fade
+
+  # ── SYSTEM ──────────────────────────────────────────────
+  - type: horizontal-stack
+    cards:
+      - type: custom:mushroom-entity-card
+        entity: sensor.batteria_ws90
+        name: Batteria
+        icon: mdi:battery
+        icon_color: green
+        fill_container: true
+        layout: vertical
+        primary_info: state
+        secondary_info: name
+      - type: custom:mushroom-entity-card
+        entity: sensor.tensione_ws90
+        name: Tensione
+        icon: mdi:sine-wave
+        icon_color: lime
+        fill_container: true
+        layout: vertical
+        primary_info: state
+        secondary_info: name
+      - type: custom:mushroom-entity-card
+        entity: sensor.sbws_90cm_1bbb_intensita_del_segnale
+        name: Segnale BT
+        icon: mdi:bluetooth
+        icon_color: blue
+        fill_container: true
+        layout: vertical
+        primary_info: state
+        secondary_info: name
