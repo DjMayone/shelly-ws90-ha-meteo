@@ -1,0 +1,15 @@
+# ============================================================
+# Example configuration.yaml additions
+# Add these lines to your existing configuration.yaml
+# ============================================================
+
+# Custom sensor templates (WS90 + others)
+template: !include templates.yaml
+
+# Rain accumulation counters — daily, monthly, yearly
+utility_meter: !include utility_meter.yaml
+
+# Logbook exclude — entities excluded from activity log
+logbook:
+  exclude:
+    entities: !include logbook_exclude.yaml
