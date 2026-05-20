@@ -1,0 +1,261 @@
+# ============================================================
+# Sensor Templates - Shelly WS90 Weather Station
+# Include in configuration.yaml with:
+#   template: !include templates.yaml
+#
+# Note: Replace entity IDs with your own if different.
+# ============================================================
+
+- sensor:
+
+    # ── WIND ────────────────────────────────────────────────
+
+    # Converts wind speed (m/s) to Beaufort scale (0-12)
+    # with textual description attribute (e.g. "Light breeze")
+    - name: "Vento Beaufort"
+      unique_id: ws90_vento_beaufort
+      icon: mdi:weather-windy
+      state: >
+        {% set v = states('sensor.velocita_vento') | float(0) %}
+        {% if v < 0.3 %} 0
+        {% elif v < 1.6 %} 1
+        {% elif v < 3.4 %} 2
+        {% elif v < 5.5 %} 3
+        {% elif v < 8.0 %} 4
+        {% elif v < 10.8 %} 5
+        {% elif v < 13.9 %} 6
+        {% elif v < 17.2 %} 7
+        {% elif v < 20.8 %} 8
+        {% elif v < 24.5 %} 9
+        {% elif v < 28.5 %} 10
+        {% elif v < 32.7 %} 11
+        {% else %} 12
+        {% endif %}
+      attributes:
+        descrizione: >
+          {% set v = states('sensor.velocita_vento') | float(0) %}
+          {% if v < 0.3 %} Calma
+          {% elif v < 1.6 %} Bava di vento
+          {% elif v < 3.4 %} Brezza leggera
+          {% elif v < 5.5 %} Brezza tesa
+          {% elif v < 8.0 %} Vento moderato
+          {% elif v < 10.8 %} Vento teso
+          {% elif v < 13.9 %} Vento fresco
+          {% elif v < 17.2 %} Vento forte
+          {% elif v < 20.8 %} Burrasca moderata
+          {% elif v < 24.5 %} Burrasca forte
+          {% elif v < 28.5 %} Tempesta
+          {% elif v < 32.7 %} Tempesta violenta
+          {% else %} Uragano
+          {% endif %}
+      unit_of_measurement: "Bft"
+
+    # Converts wind direction degrees (0-360)
+    # to 16 cardinal points text (N, NNE, NE, ENE...)
+    - name: "Direzione Vento Testo"
+      unique_id: ws90_direzione_vento_testo
+      icon: mdi:compass-rose
+      state: >
+        {% set d = states('sensor.direzione_vento') | float(0) %}
+        {% set punti = ['N','NNE','NE','ENE','E','ESE','SE','SSE',
+                        'S','SSO','SO','OSO','O','ONO','NO','NNO'] %}
+        {{ punti[((d + 11.25) / 22.5) | int % 16] }}
+
+    # Converts wind speed from m/s to km/h
+    - name: "Velocità Vento km/h"
+      unique_id: ws90_velocita_vento_kmh
+      icon: mdi:weather-windy
+      state: >
+        {{ (states('sensor.velocita_vento') | float(0) * 3.6) | round(1) }}
+      unit_of_measurement: "km/h"
+
+    # Converts wind gust from m/s to km/h
+    - name: "Raffica Vento km/h"
+      unique_id: ws90_raffica_vento_kmh
+      icon: mdi:weather-windy-variant
+      state: >
+        {{ (states('sensor.raffica_vento') | float(0) * 3.6) | round(1) }}
+      unit_of_measurement: "km/h"
+
+
+    # ── TEMPERATURE & HUMIDITY ───────────────────────────────
+
+    # Heat Index — perceived temperature considering heat and humidity
+    # Uses Rothfusz formula when T >= 27°C,
+    # otherwise returns the actual temperature
+    - name: "Temperatura Percepita"
+      unique_id: ws90_temperatura_percepita
+      icon: mdi:thermometer-lines
+      state: >
+        {% set T = states('sensor.temperatura_esterna') | float(0) %}
+        {% set RH = states('sensor.umidita_esterna') | float(0) %}
+        {% if T >= 27 %}
+          {% set hi = -8.78469475556
+            + 1.61139411 * T
+            + 2.33854883889 * RH
+            - 0.14611605 * T * RH
+            - 0.012308094 * T**2
+            - 0.0164248277778 * RH**2
+            + 0.002211732 * T**2 * RH
+            + 0.00072546 * T * RH**2
+            - 0.000003582 * T**2 * RH**2 %}
+          {{ hi | round(1) }}
+        {% else %}
+          {{ T }}
+        {% endif %}
+      unit_of_measurement: "°C"
+      device_class: temperature
+
+    # Wind Chill — perceived temperature considering cold and wind
+    # Uses Canadian formula when T <= 10°C and wind > 4.8 km/h,
+    # otherwise returns the actual temperature
+    - name: "Temperatura Wind Chill"
+      unique_id: ws90_wind_chill
+      icon: mdi:thermometer-chevron-down
+      state: >
+        {% set T = states('sensor.temperatura_esterna') | float(0) %}
+        {% set v = (states('sensor.velocita_vento') | float(0) * 3.6) %}
+        {% if T <= 10 and v > 4.8 %}
+          {{ (13.12 + 0.6215*T - 11.37*(v**0.16) + 0.3965*T*(v**0.16)) | round(1) }}
+        {% else %}
+          {{ T }}
+        {% endif %}
+      unit_of_measurement: "°C"
+      device_class: temperature
+
+    # Qualitative thermal comfort assessment
+    # combining temperature and relative humidity
+    - name: "Comfort Termico"
+      unique_id: ws90_comfort_termico
+      icon: mdi:home-thermometer
+      state: >
+        {% set T = states('sensor.temperatura_esterna') | float(0) %}
+        {% set RH = states('sensor.umidita_esterna') | float(0) %}
+        {% if T < 0 %} Gelido
+        {% elif T < 5 %} Molto freddo
+        {% elif T < 10 %} Freddo
+        {% elif T < 15 %} Fresco
+        {% elif T < 20 and RH < 70 %} Confortevole
+        {% elif T < 25 and RH < 60 %} Piacevole
+        {% elif T < 28 and RH < 70 %} Caldo
+        {% elif T >= 28 and RH >= 70 %} Afoso
+        {% elif T >= 28 %} Molto caldo
+        {% else %} Confortevole
+        {% endif %}
+
+
+    # ── PRESSURE ────────────────────────────────────────────
+
+    # Atmospheric pressure rounded to 1 decimal
+    # with stability category attribute
+    # (from "Perturbato" below 980 hPa to "Molto stabile" above 1030 hPa)
+    - name: "Pressione Tendenza"
+      unique_id: ws90_pressione_tendenza
+      icon: mdi:gauge
+      state: >
+        {{ states('sensor.pressione_atmosferica') | float(0) | round(1) }}
+      unit_of_measurement: "hPa"
+      device_class: atmospheric_pressure
+      attributes:
+        categoria: >
+          {% set p = states('sensor.pressione_atmosferica') | float(0) %}
+          {% if p < 980 %} Perturbato
+          {% elif p < 1000 %} Variabile instabile
+          {% elif p < 1013 %} Variabile
+          {% elif p < 1020 %} Bello variabile
+          {% elif p < 1030 %} Bello stabile
+          {% else %} Molto stabile
+          {% endif %}
+
+
+    # ── SUN & UV ────────────────────────────────────────────
+
+    # Estimated solar irradiance in W/m²
+    # converted from lux using factor ~0.0079
+    # (valid for direct sunlight)
+    - name: "Irraggiamento Solare"
+      unique_id: ws90_irraggiamento_solare
+      icon: mdi:solar-power
+      state: >
+        {{ (states('sensor.illuminamento') | float(0) * 0.0079) | round(1) }}
+      unit_of_measurement: "W/m²"
+
+    # UV risk category according to WHO scale
+    # with sun protection advice attribute
+    - name: "Categoria UV"
+      unique_id: ws90_categoria_uv
+      icon: mdi:sun-wireless
+      state: >
+        {% set uv = states('sensor.indice_uv') | float(0) %}
+        {% if uv < 3 %} Basso
+        {% elif uv < 6 %} Moderato
+        {% elif uv < 8 %} Alto
+        {% elif uv < 11 %} Molto alto
+        {% else %} Estremo
+        {% endif %}
+      attributes:
+        consiglio: >
+          {% set uv = states('sensor.indice_uv') | float(0) %}
+          {% if uv < 3 %} Nessuna protezione necessaria
+          {% elif uv < 6 %} Protezione solare consigliata
+          {% elif uv < 8 %} Crema solare obbligatoria, evitare le ore centrali
+          {% elif uv < 11 %} Ridurre esposizione, ombra obbligatoria
+          {% else %} Evitare esposizione diretta
+          {% endif %}
+
+
+    # ── GENERAL WEATHER CONDITION ────────────────────────────
+
+    # Synthesizes the general weather condition as a string
+    # combining rain status, wind speed and lux level.
+    # Also changes the icon dynamically based on the condition.
+    - name: "Condizione Meteo"
+      unique_id: ws90_condizione_meteo
+      icon: >
+        {% set pioggia = is_state('binary_sensor.pioggia_in_corso', 'on') %}
+        {% set lux = states('sensor.illuminamento') | float(0) %}
+        {% set vento = states('sensor.velocita_vento') | float(0) %}
+        {% if pioggia %} mdi:weather-rainy
+        {% elif vento > 10 %} mdi:weather-windy
+        {% elif lux > 50000 %} mdi:weather-sunny
+        {% elif lux > 10000 %} mdi:weather-partly-cloudy
+        {% else %} mdi:weather-cloudy
+        {% endif %}
+      state: >
+        {% set pioggia = is_state('binary_sensor.pioggia_in_corso', 'on') %}
+        {% set lux = states('sensor.illuminamento') | float(0) %}
+        {% set vento = states('sensor.velocita_vento') | float(0) %}
+        {% if pioggia and vento > 10 %} Temporale
+        {% elif pioggia %} Pioggia
+        {% elif vento > 13.9 %} Vento forte
+        {% elif lux > 50000 %} Soleggiato
+        {% elif lux > 20000 %} Parzialmente nuvoloso
+        {% elif lux > 5000 %} Nuvoloso
+        {% else %} Coperto
+        {% endif %}
+
+
+    # ── BATTERY & SYSTEM ────────────────────────────────────
+
+    # Qualitative battery status with dynamic icon
+    # and percentage attribute for numerical reference
+    - name: "Stato Batteria WS90"
+      unique_id: ws90_stato_batteria
+      icon: >
+        {% set b = states('sensor.batteria_ws90') | float(0) %}
+        {% if b > 80 %} mdi:battery
+        {% elif b > 60 %} mdi:battery-80
+        {% elif b > 40 %} mdi:battery-60
+        {% elif b > 20 %} mdi:battery-40
+        {% else %} mdi:battery-20
+        {% endif %}
+      state: >
+        {% set b = states('sensor.batteria_ws90') | float(0) %}
+        {% if b > 80 %} Ottima
+        {% elif b > 60 %} Buona
+        {% elif b > 40 %} Discreta
+        {% elif b > 20 %} Bassa
+        {% else %} Critica
+        {% endif %}
+      attributes:
+        percentuale: "{{ states('sensor.batteria_ws90') | float(0) }}"
