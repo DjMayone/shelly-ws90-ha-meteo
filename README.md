@@ -42,28 +42,29 @@ This project turns a Shelly WS90 outdoor weather station into a fully integrated
 ---
 
 ## 🏗 Architecture
+```
 Shelly WS90 (outdoor)
-│
-│ Bluetooth (BTHome)
-▼
+        │
+        │ Bluetooth (BTHome)
+        ▼
 ESP32 Bluetooth Proxy ──────────────────────────────────┐
-│                                               │
-│ WiFi                                          │
-▼                                               │
+        │                                               │
+        │ WiFi                                          │
+        ▼                                               │
 Home Assistant                                          │
-├── BTHome Integration                                │
-├── Custom Sensor Templates (templates.yaml)          │
-├── Utility Meters (utility_meter.yaml)               │
-├── Lovelace Dashboard                                │
-└── ESPHome Integration                               │
-│                                         │
-│ WiFi (API)                              │
-▼                                         │
-SenseCAP Indicator D1 ◄──────────────────────────────┘
-├── LVGL Display (weather data)
-├── Bluetooth Proxy (active)
-└── FT5X06 Touchscreen
-
+  ├── BTHome Integration                                │
+  ├── Custom Sensor Templates (templates.yaml)          │
+  ├── Utility Meters (utility_meter.yaml)               │
+  ├── Lovelace Dashboard                                │
+  └── ESPHome Integration                               │
+              │                                         │
+              │ WiFi (API)                              │
+              ▼                                         │
+  SenseCAP Indicator D1 ◄──────────────────────────────┘
+    ├── LVGL Display (weather data)
+    ├── Bluetooth Proxy (active)
+    └── FT5X06 Touchscreen
+```
 
 ---
 
