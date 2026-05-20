@@ -1,0 +1,28 @@
+# ============================================================
+# Utility Meters - Rain accumulation counters
+# Include in configuration.yaml with:
+#   utility_meter: !include utility_meter.yaml
+#
+# Generated entities:
+#   sensor.pioggia_giornaliera  → resets daily at midnight
+#   sensor.pioggia_mensile      → resets on 1st of each month
+#   sensor.pioggia_annuale      → resets on January 1st
+# ============================================================
+
+# Daily rain accumulation — resets at midnight
+pioggia_giornaliera:
+  source: sensor.precipitazioni
+  cycle: daily
+  name: "Pioggia Giornaliera"
+
+# Monthly rain accumulation — resets on 1st of month
+pioggia_mensile:
+  source: sensor.precipitazioni
+  cycle: monthly
+  name: "Pioggia Mensile"
+
+# Yearly rain accumulation — resets on January 1st
+pioggia_annuale:
+  source: sensor.precipitazioni
+  cycle: yearly
+  name: "Pioggia Annuale"
